@@ -1,0 +1,16 @@
+[project]
+name = "ktbai_noticeboard"
+version = "0.1.0"
+description = "Notice board backend using FastAPI"
+authors = [{ name = "Jiwoo Lee" }]
+requires-python = ">=3.10"
+
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.27",
+]
+
+[tool.uvicorn]
+host = "127.0.0.1"
+port = 8000
+reload = true
