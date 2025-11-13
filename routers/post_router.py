@@ -1,4 +1,4 @@
-from fastapi import APIRouter, UploadFile, File, Form, Body
+from fastapi import APIRouter, UploadFile, File, Form, Body, Query
 from controllers import post_controller, comment_controller
 
 router = APIRouter(prefix="/posts", tags=["Posts"])
@@ -50,20 +50,17 @@ def toggle_like(post_id: int):
 
 @router.get("/{post_id}/comments")
 def get_comments(post_id: int):
-    """댓글 목록"""
     return comment_controller.get_comments(post_id)
 
 @router.post("/{post_id}/comments")
 def add_comment(post_id: int, data: dict = Body(...)):
-    """댓글 등록"""
     return comment_controller.add_comment(post_id, data)
 
 @router.put("/{post_id}/comments/{comment_id}")
 def update_comment(post_id: int, comment_id: int, data: dict = Body(...)):
-    """댓글 수정"""
     return comment_controller.update_comment(post_id, comment_id, data)
 
 @router.delete("/{post_id}/comments/{comment_id}")
-def delete_comment(post_id: int, comment_id: int):
-    """댓글 삭제"""
-    return comment_controller.delete_comment(post_id, comment_id)
+def delete_comment(post_id: int, comment_id: int, author: str | None = Query(None)):
+    # author 쿼리로 오면 작성자 검증에 사용 (없어도 삭제 가능하도록 옵션)
+    return comment_controller.delete_comment(post_id, comment_id, author)
