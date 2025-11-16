@@ -1,70 +1,52 @@
 from fastapi import HTTPException, UploadFile
 from datetime import datetime
+from models.post_model import Post, PostCreate, PostUpdate, posts, liked_posts
 import os
 
-# 임시 저장용 데이터 (DB 대체)
-posts = [
-    {
-        "id": 1,
-        "title": "제목 1",
-        "content": "본문 내용입니다.",
-        "author": "데미 작성자",
-        "image": None,
-        "views": 123,
-        "likes": 10,
-        "created_at": "2025-11-11 10:00:00",
-        "updated_at": None,
-    }
-]
 
-liked_posts = set()
+# 기본 설정
 UPLOAD_DIR = "uploads"
 
-# -------------------------------
 # 유틸 함수
-# -------------------------------
-
-def _get_post(post_id: int):
+def _get_post(post_id: int) -> dict:
     post = next((p for p in posts if p["id"] == post_id), None)
     if not post:
         raise HTTPException(404, "게시글을 찾을 수 없습니다.")
     return post
 
-def _next_post_id():
+def _next_post_id() -> int:
     return max([p["id"] for p in posts], default=0) + 1
 
 def _format_number(n: int) -> str:
     if n >= 100_000:
-        return f"{n//1000}k"
+        return f"{n // 1000}k"
     elif n >= 10_000:
-        return f"{n//1000}k"
+        return f"{n // 1000}k"
     elif n >= 1_000:
-        return f"{n//1000}k"
+        return f"{n // 1000}k"
     return str(n)
 
-# -------------------------------
 # 게시글 CRUD
-# -------------------------------
-
 def get_all_posts():
     """게시글 목록"""
-    return {
-        "count": len(posts),
-        "posts": [
+    formatted_posts = []
+    for p in posts:
+        formatted_posts.append(
             {
                 **p,
                 "views_display": _format_number(p["views"]),
                 "likes_display": _format_number(p["likes"]),
+                "is_liked": p["id"] in liked_posts,
             }
-            for p in posts
-        ],
-    }
+        )
+    return {"count": len(posts), "posts": formatted_posts}
 
 
 def get_post_detail(post_id: int):
     """게시글 상세"""
     post = _get_post(post_id)
-    post["views"] += 1
+    post["views"] += 1  # 조회수 증가
+
     return {
         **post,
         "views_display": _format_number(post["views"]),
@@ -73,10 +55,10 @@ def get_post_detail(post_id: int):
     }
 
 
-def create_post(title: str, content: str, author: str, file: UploadFile | None):
+def create_post(data: PostCreate, file: UploadFile | None = None):
     """게시글 생성"""
-    title = title.strip()
-    content = content.strip()
+    title = data.title.strip()
+    content = data.content.strip()
 
     if not title or not content:
         raise HTTPException(400, "제목과 내용을 모두 입력해주세요.")
@@ -85,50 +67,51 @@ def create_post(title: str, content: str, author: str, file: UploadFile | None):
 
     image_url = None
     if file:
-        if not os.path.exists(UPLOAD_DIR):
-            os.makedirs(UPLOAD_DIR)
+        os.makedirs(UPLOAD_DIR, exist_ok=True)
         filename = f"post_{_next_post_id()}_{file.filename}"
         file_path = os.path.join(UPLOAD_DIR, filename)
         with open(file_path, "wb") as f:
             f.write(file.file.read())
         image_url = f"/{file_path}"
 
-    new_post = {
-        "id": _next_post_id(),
-        "title": title,
-        "content": content,
-        "author": author,
-        "image": image_url,
-        "views": 0,
-        "likes": 0,
-        "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "updated_at": None,
-    }
-    posts.append(new_post)
+    new_post = Post(
+        id=_next_post_id(),
+        title=title,
+        content=content,
+        author=data.author or "익명",
+        image=image_url,
+        views=0,
+        likes=0,
+        created_at=datetime.now(),
+        updated_at=None,
+    )
+    posts.append(new_post.dict())
     return {"message": "게시글이 등록되었습니다.", "post": new_post}
 
 
-def update_post(post_id: int, title: str, content: str, file: UploadFile | None):
+def update_post(post_id: int, data: PostUpdate, file: UploadFile | None = None):
     """게시글 수정"""
     post = _get_post(post_id)
 
-    if len(title) > 26:
+    new_title = data.title.strip() if data.title else post["title"]
+    new_content = data.content.strip() if data.content else post["content"]
+
+    if len(new_title) > 26:
         raise HTTPException(400, "제목은 최대 26자까지만 작성 가능합니다.")
 
-    post["title"] = title
-    post["content"] = content
-    post["updated_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    post["title"] = new_title
+    post["content"] = new_content
+    post["updated_at"] = datetime.now()
 
     if file:
-        if not os.path.exists(UPLOAD_DIR):
-            os.makedirs(UPLOAD_DIR)
+        os.makedirs(UPLOAD_DIR, exist_ok=True)
         filename = f"post_{post_id}_{file.filename}"
         file_path = os.path.join(UPLOAD_DIR, filename)
         with open(file_path, "wb") as f:
             f.write(file.file.read())
         post["image"] = f"/{file_path}"
 
-    return {"message": "게시글이 수정되었습니다.", "post": post}
+    return {"message": "게시글이 수정되었습니다.", "post": Post(**post)}
 
 
 def delete_post(post_id: int):
