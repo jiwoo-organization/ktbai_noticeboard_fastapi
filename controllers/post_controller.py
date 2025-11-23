@@ -3,7 +3,10 @@ from datetime import datetime
 from models.post_model import Post, PostCreate, PostUpdate, posts, liked_posts
 import os
 
-
+from controllers.ai_controller import generate_comment
+from models.ai_model import CommentGenRequest
+from controllers.comment_controller import add_comment
+from models.comment_model import CommentCreate
 # 기본 설정
 UPLOAD_DIR = "uploads"
 
@@ -86,7 +89,23 @@ def create_post(data: PostCreate, file: UploadFile | None = None):
         updated_at=None,
     )
     posts.append(new_post.dict())
-    return {"message": "게시글이 등록되었습니다.", "post": new_post}
+
+    # 1) AI 모델 요청 형식 만들기
+    ai_request = CommentGenRequest(
+        post_title=new_post.title,
+        post_content=new_post.content
+    )
+
+    # 2) 로컬 AI 모델로 댓글 생성
+    ai_comment_text = generate_comment(ai_request)["comment"]
+
+    # 3) 댓글 등록
+    ai_comment = CommentCreate(
+        author="AI Bot",
+        content=ai_comment_text
+    )
+    add_comment(new_post.id, ai_comment)
+    return {"message": "게시글이 등록되었습니다.", "post": new_post, "ai_comment": ai_comment_text}
 
 
 def update_post(post_id: int, data: PostUpdate, file: UploadFile | None = None):
