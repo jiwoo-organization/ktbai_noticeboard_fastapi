@@ -1,8 +1,30 @@
 # models/post_model.py
-from pydantic import BaseModel, Field
+from sqlalchemy import Column, Integer, String, Text, DateTime
 from datetime import datetime
-from typing import Optional, List, Set
+from database import Base
+from pydantic import BaseModel, Field
+from typing import Optional
 
+# ------------------------------
+# SQLAlchemy ORM 모델
+# ------------------------------
+class PostORM(Base):
+    __tablename__ = "posts"
+
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String(26), nullable=False)
+    content = Column(Text, nullable=False)
+    author = Column(String(50), default="익명")
+    image = Column(String(255), nullable=True)
+    views = Column(Integer, default=0)
+    likes = Column(Integer, default=0)
+    created_at = Column(DateTime, default=datetime.now)
+    updated_at = Column(DateTime, nullable=True)
+
+
+# ------------------------------
+# Pydantic 스키마 (입력/출력용)
+# ------------------------------
 class PostBase(BaseModel):
     title: str = Field(..., max_length=26)
     content: str
@@ -16,43 +38,16 @@ class PostUpdate(BaseModel):
     content: Optional[str] = None
     author: Optional[str] = None
 
-class Post(PostBase):
+class Post(BaseModel):
     id: int
-    image: Optional[str] = None
-    views: int = 0
-    likes: int = 0
+    title: str
+    content: str
+    author: str
+    image: Optional[str]
+    views: int
+    likes: int
     created_at: datetime
-    updated_at: Optional[datetime] = None
+    updated_at: Optional[datetime]
 
     class Config:
-        orm_mode = True
-
-# ---------------------------
-# Dummy Data
-# ---------------------------
-posts: List[dict] = [
-    {
-        "id": 1,
-        "title": "오늘의 제주 날씨",
-        "content": "함덕 해수욕장 정말 맑아요!",
-        "author": "jeju_lover",
-        "image": None,
-        "views": 120,
-        "likes": 4,
-        "created_at": "2025-11-12 10:00:00",
-        "updated_at": None,
-    },
-    {
-        "id": 2,
-        "title": "카페 추천 부탁드려요 ☕️",
-        "content": "애월 근처 분위기 좋은 곳 있을까요?",
-        "author": "coffee_holic",
-        "image": None,
-        "views": 89,
-        "likes": 2,
-        "created_at": "2025-11-13 09:12:00",
-        "updated_at": None,
-    },
-]
-
-liked_posts: Set[int] = set()
+        from_attributes = True

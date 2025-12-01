@@ -1,6 +1,20 @@
 # models/user_model.py
+from sqlalchemy import Column, Integer, String
+from database import Base
 from pydantic import BaseModel, Field, EmailStr
-from typing import Optional, List
+
+# ---------------------------
+# SQLAlchemy ORM Model
+# ---------------------------
+class UserORM(Base):
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(50), nullable=False)
+    nickname = Column(String(20), nullable=False, unique=True)
+    email = Column(String(255), nullable=False, unique=True)
+    password = Column(String(255), nullable=False)
+
 
 # ---------------------------
 # Pydantic Models
@@ -31,14 +45,4 @@ class User(UserBase):
     id: int
 
     class Config:
-        orm_mode = True
-
-# ---------------------------
-# Dummy Data (DB Simulation)
-# ---------------------------
-users: List[dict] = [
-    {"id": 1, "name": "Alice", "nickname": "jeju_lover", "email": "alice@test.com", "password": "Abcd1234!"},
-    {"id": 2, "name": "Bob", "nickname": "foodie_bob", "email": "bob@test.com", "password": "Password123!"},
-    {"id": 3, "name": "Carol", "nickname": "traveler_carol", "email": "carol@test.com", "password": "Hello5678!"},
-    {"id": 4, "name": "Dave", "nickname": "surf_dave", "email": "dave@test.com", "password": "Surf1234!"},
-]
+        from_attributes = True
