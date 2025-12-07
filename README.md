@@ -1,12 +1,14 @@
 # 아무말 대잔치 백엔드
 ## 기술 스택
-- Python 3.10+
+- Python
 - FastAPI
 - SQLAlchemy ORM
 - SQLite (로컬 개발용)
+- MySQL
 - JWT authentication
 - CORS Middleware
 - Multipart File Upload
+- HuggingFace Transformers (KoGPT-2 사용)
 
 ## API 엔드 포인트
 ### Users API
@@ -38,6 +40,11 @@
 | PUT | `/api/posts/{post_id}/comments/{comment_id}` | 댓글 수정 |
 | DELETE | `/api/posts/{post_id}/comments/{comment_id}` | 댓글 삭제 |
 
+### AI API
+| Method | Endpoint | 설명 |
+|--------|----------|------|
+| POST | `/api/ai/generate-comment` | KoGPT-2 기반 자동 댓글 생성 |
+
 ## 주요 기능 요약
 ✔ JWT 로그인 인증
 - 로그인 성공 시 access token 발급
@@ -53,6 +60,9 @@
 ✔ 좋아요 토글
 - 좋아요 / 취소 자동 처리
 
+✔ AI 자동 댓글 생성
+- 게시글 작성 시 KoGPT-2가 댓글을 1개 자동 생성하여 DB 저장
+  
 ## 트러블 슈팅
 - 문제: 게시글 이미지 경로 로드 실패
 - 해결: 이미지 URL을 /uploads/...로 반환하도록 통일
