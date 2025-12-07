@@ -1,17 +1,30 @@
 # main.py
 from fastapi import FastAPI
-from database import Base, engine
-from routers.post_router import router as post_router
-from routers.ai_router import router as ai_router
-from routers.user_router import router as user_router
-from routers.comment_router import router as comment_router
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
-# 테이블 자동 생성
-Base.metadata.create_all(bind=engine)
+from routers.user_router import router as user_router
+from routers.post_router import router as post_router
+from routers.comment_router import router as comment_router
 
 app = FastAPI()
 
-app.include_router(post_router)
-app.include_router(ai_router)
-app.include_router(user_router)
-app.include_router(comment_router)
+# CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://127.0.0.1:5500",
+        "http://localhost:5500",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# 업로드 이미지 제공
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+
+# 🔥 모든 라우터는 /api 아래에 붙인다
+app.include_router(user_router, prefix="/api")
+app.include_router(post_router, prefix="/api")
+app.include_router(comment_router, prefix="/api")

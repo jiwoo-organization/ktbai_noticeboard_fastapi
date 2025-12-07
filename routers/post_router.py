@@ -1,27 +1,23 @@
 # routers/post_router.py
-from fastapi import APIRouter, UploadFile, File, Form, Body, Query, Depends
+from fastapi import APIRouter, UploadFile, File, Form, Depends
 from sqlalchemy.orm import Session
 
-from controllers import post_controller, comment_controller
+from controllers import post_controller
 from models.post_model import PostCreate, PostUpdate
-from models.comment_model import CommentCreate
 from database import get_db
+from auth_utils import get_current_user
+from models.user_model import UserORM
 
 router = APIRouter(prefix="/posts", tags=["Posts"])
 
-# ---------------------------
-# 게시글 CRUD
-# ---------------------------
 
 @router.get("")
 def get_all_posts(db: Session = Depends(get_db)):
-    """게시글 목록 조회"""
     return post_controller.get_all_posts(db)
 
 
 @router.get("/{post_id}")
 def get_post_detail(post_id: int, db: Session = Depends(get_db)):
-    """게시글 상세 조회"""
     return post_controller.get_post_detail(db, post_id)
 
 
@@ -29,11 +25,11 @@ def get_post_detail(post_id: int, db: Session = Depends(get_db)):
 def create_post(
     title: str = Form(...),
     content: str = Form(...),
-    author: str = Form("익명"),
     file: UploadFile | None = File(None),
     db: Session = Depends(get_db),
+    current_user: UserORM = Depends(get_current_user),
 ):
-    data = PostCreate(title=title, content=content, author=author)
+    data = PostCreate(title=title, content=content, author=current_user.nickname)
     return post_controller.create_post(db, data, file)
 
 
@@ -44,20 +40,25 @@ def update_post(
     content: str = Form(...),
     file: UploadFile | None = File(None),
     db: Session = Depends(get_db),
+    current_user: UserORM = Depends(get_current_user),
 ):
-    """게시글 수정"""
     data = PostUpdate(title=title, content=content)
-    return post_controller.update_post(db, post_id, data, file)
+    return post_controller.update_post(db, post_id, data, file, current_user)
 
 
 @router.delete("/{post_id}")
-def delete_post(post_id: int, db: Session = Depends(get_db)):
-    """게시글 삭제"""
-    return post_controller.delete_post(db, post_id)
+def delete_post(
+    post_id: int,
+    db: Session = Depends(get_db),
+    current_user: UserORM = Depends(get_current_user),
+):
+    return post_controller.delete_post(db, post_id, current_user)
 
 
 @router.post("/{post_id}/like")
-def toggle_like(post_id: int, db: Session = Depends(get_db)):
-    """좋아요 토글"""
+def toggle_like(
+    post_id: int,
+    db: Session = Depends(get_db),
+    current_user: UserORM = Depends(get_current_user),
+):
     return post_controller.toggle_like(db, post_id)
-

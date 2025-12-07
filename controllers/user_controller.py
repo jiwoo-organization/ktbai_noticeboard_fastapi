@@ -4,8 +4,12 @@ from sqlalchemy.orm import Session
 from models.user_model import UserORM
 import re
 
+from auth_utils import create_access_token
 
-# 유효성 검증 함수
+
+# ---------------------------
+# 유효성 검증 함수들
+# ---------------------------
 def _is_valid_email(db: Session, email: str, exclude_user_id: int | None = None):
     if not email or not email.strip():
         raise HTTPException(400, "이메일을 입력해주세요.")
@@ -58,7 +62,9 @@ def _is_valid_nickname(db: Session, nickname: str, exclude_user_id: int | None =
     return True
 
 
-# 로그인
+# ---------------------------
+# 로그인 (JWT 발급)
+# ---------------------------
 def login(db: Session, data: dict):
     email = data.get("email")
     password = data.get("password")
@@ -74,37 +80,40 @@ def login(db: Session, data: dict):
     if not user:
         raise HTTPException(401, "아이디 또는 비밀번호를 확인해주세요.")
 
+    # 여기서 JWT 발급
+    access_token = create_access_token({"sub": str(user.id)})
+
     return {
-        "message": f"{user.name}님 환영합니다.",
-        "nickname": user.nickname,
-        "email": user.email,
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user": {
+            "id": user.id,
+            "email": user.email,
+            "nickname": user.nickname,
+        },
     }
 
 
+# ---------------------------
 # 회원가입
+# ---------------------------
 def register(db: Session, data: dict):
     email = data.get("email")
     password = data.get("password")
     password_confirm = data.get("password_confirm")
     nickname = data.get("nickname")
 
-    # 이메일 검증
     _is_valid_email(db, email)
-
-    # 비밀번호 검증
     _is_valid_password(password)
     if password != password_confirm:
         raise HTTPException(400, "비밀번호가 일치하지 않습니다.")
-
-    # 닉네임 검증
     _is_valid_nickname(db, nickname)
 
-    # 유저 생성 (name을 nickname으로 사용)
     new_user = UserORM(
         name=nickname,
         nickname=nickname,
         email=email,
-        password=password,
+        password=password,  # 실제 서비스라면 해시 필요
     )
     db.add(new_user)
     db.commit()
@@ -120,7 +129,9 @@ def register(db: Session, data: dict):
     }
 
 
+# ---------------------------
 # 프로필 수정
+# ---------------------------
 def update_profile(db: Session, user_id: int, data: dict):
     user = db.query(UserORM).filter(UserORM.id == user_id).first()
     if not user:
@@ -139,7 +150,9 @@ def update_profile(db: Session, user_id: int, data: dict):
     return {"message": "프로필 수정이 완료되었습니다.", "nickname": user.nickname}
 
 
+# ---------------------------
 # 비밀번호 수정
+# ---------------------------
 def update_password(db: Session, user_id: int, data: dict):
     user = db.query(UserORM).filter(UserORM.id == user_id).first()
     if not user:
